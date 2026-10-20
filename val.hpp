@@ -45,6 +45,19 @@ private:
             child->unwrp_backward();
         }
     }
+
+    auto unrwp_calcVal() -> double {
+        if (__children_.empty()) return data_;
+
+        auto data1 = __children_[0]->unrwp_calcVal();
+        auto data2 = __children_[1]->unrwp_calcVal();
+        auto res = disptachOperation(
+            __op_,
+            data1,
+            data2
+        );
+        return res;
+    }
     
     auto storeGrad(T grad) noexcept -> void { grad_ += grad; }
     
@@ -82,17 +95,9 @@ public:
         unwrp_backward();
     }
 
-    auto calcVal() -> double {
-        if (__children_.empty()) return data_;
-
-        auto data1 = __children_[0]->calcVal();
-        auto data2 = __children_[1]->calcVal();
-        data_ = disptachOperation(
-            __op_,
-            data1,
-            data2
-        );
-        return data_;
+    auto calcVal() -> V<T>& {
+        data_ = unrwp_calcVal();
+        return *this;
     }
 
     auto applyGrad(double step) -> void {
