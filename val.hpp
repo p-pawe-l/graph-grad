@@ -66,6 +66,11 @@ public:
         }
     }
 
+    auto wrp_backward() -> void {
+        grad_ = 1.0;
+        backward();
+    }
+
     auto operator+(V<T>& other) -> V<T> {
         V<T> out(
             data_ + other.getData(), 
