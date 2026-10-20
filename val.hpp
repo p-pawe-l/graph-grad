@@ -18,7 +18,7 @@ private:
     T data_; 
     double grad_ = 0.0;
     std::vector<V<T>*> _children_;
-    MathOperation _op_;
+    MathOperation _op_ = MathOperation::NONE;
 
     V(T data, std::initializer_list<V<T>*> _children, MathOperation _op):
     data_(std::move(data)), _children_(std::move(_children)), _op_(_op)
@@ -30,7 +30,7 @@ private:
     }
 
 public:
-    V(T data): data_(std::move(data)), _op_(MathOperation::NONE) {}
+    V(T data): data_(std::move(data)) {}
 
     [[nodiscard]] auto getData() const noexcept -> T { return data_; }
     [[nodiscard]] auto getGrad() const noexcept -> T { return grad_; }
