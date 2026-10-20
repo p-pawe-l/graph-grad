@@ -1,8 +1,9 @@
 #pragma once 
 
 #include <cstdint>
-#include <vector>
+#include <utility>
 #include <initializer_list>
+#include <functional>
 
 enum class MathOperation : uint8_t {
     NONE = 0,
@@ -15,90 +16,91 @@ enum class MathOperation : uint8_t {
 template <typename T>
 class V {
 private:    
+    using Pv = V<T>*;
+
     T data_; 
     double grad_ = 0.0;
-    std::vector<V<T>*> _children_;
-    MathOperation _op_ = MathOperation::NONE;
+    std::vector<Pv> __children_;
+    MathOperation __op_ = MathOperation::NONE;
+    std::function<void(double)> __grad_func_ = nullptr;
 
-    V(T data, std::initializer_list<V<T>*> _children, MathOperation _op):
-    data_(std::move(data)), _children_(std::move(_children)), _op_(_op)
-    {
-        _children_.reserve(_children.size());
-        auto it = _children.begin();
-        for (int i = 0; i < _children.size(); ++i) 
-            _children_[i] = *it++;
+    V(
+        T data, 
+        std::initializer_list<V<T>*> __children, 
+        MathOperation __op,
+        std::function<void(double)> __grad_func
+    ):
+        data_(std::move(data)), 
+        __children_(__children), 
+        __op_(__op), 
+        __grad_func_(__grad_func)
+    {}
+
+    auto unwrp_backward() -> void {
+        if (__children_.empty() || __grad_func_ == nullptr) return;
+        
+        __grad_func_(grad_);
+        for (auto& child : __children_) {
+            child->unwrp_backward();
+        }
     }
+    
+    auto storeGrad(T grad) noexcept -> void { grad_ += grad; }
 
 public:
     V(T data): data_(std::move(data)) {}
 
     [[nodiscard]] auto getData() const noexcept -> T { return data_; }
-    [[nodiscard]] auto getGrad() const noexcept -> T { return grad_; }
+    [[nodiscard]] auto getGrad() const noexcept -> double { return grad_; }
     
     auto setData(T data) noexcept -> void { data_ = data; }
-    auto setGrad(T grad) noexcept -> void { grad_ = grad; }
-    auto storeGrad(T grad) noexcept -> void { grad_ += grad; }
-
-    auto backGradToChildren() -> void {
-        switch (_op_) {
-        case MathOperation::ADD:
-            for (auto& child : _children_) child->storeGrad(grad_);
-            break;
-        case MathOperation::SUB:
-            for (auto& child: _children_) child->storeGrad(-grad_);
-            break;
-        case MathOperation::MUL:
-            for (int i = 0; i < 2; ++i) {
-                auto g = _children_[i == 0 ? 1 : 0]->getData();
-                _children_[i]->storeGrad(g * grad_);
-            }
-            break;
-        default:
-            break;
-        }
-    }
+    auto setGrad(double grad) noexcept -> void { grad_ = grad; }
 
     auto backward() -> void {
-        if (_children_.empty()) return;
-        backGradToChildren();
-        for (auto& child : _children_) {
-            child->backward();
-        }
-    }
-
-    auto wrp_backward() -> void {
         grad_ = 1.0;
-        backward();
+        unwrp_backward();
     }
 
-    auto operator+(V<T>& other) -> V<T> {
+    [[nodiscard]] auto operator+(V<T>& other) -> V<T> {
         V<T> out(
             data_ + other.getData(), 
             {this, &other},
-            MathOperation::ADD
+            MathOperation::ADD,
+            [&](double g) {
+                this->storeGrad(g);
+                other.storeGrad(g);
+            }
         );  
         return out;
     } 
     
-    auto operator-(V<T>& other) -> V<T> {
+    [[nodiscard]] auto operator-(V<T>& other) -> V<T> {
         V<T> out(
             data_  - other.getData(),
             {this, &other},
-            MathOperation::SUB
+            MathOperation::SUB,
+            [&](double g) {
+                this->storeGrad(-g);
+                other.storeGrad(-g);
+            }
         );
         return out;
     }
  
-    auto operator*(V<T>& other) -> V<T> {
+    [[nodiscard]] auto operator*(V<T>& other) -> V<T> {
         V<T> out(
             data_ * other.getData(),
             {this, &other},
-            MathOperation::MUL
+            MathOperation::MUL,
+            [&](double g) {
+                this->storeGrad(other.getData() * g);
+                other.storeGrad(this->getData() * g);
+            }
         );
         return out;
     }
 
-    auto operator/(V<T>& other) -> V<T> {
+    [[nodiscard]] auto operator/(V<T>& other) -> V<T> {
         V<T> out(
             data_ / other.getData(),
             {this, &other},
