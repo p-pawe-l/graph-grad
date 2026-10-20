@@ -23,6 +23,7 @@ private:
     std::vector<Pv> __children_;
     MathOperation __op_ = MathOperation::NONE;
     std::function<void(double)> __grad_func_ = nullptr;
+    std::string __label_;
 
     V(
         T data, 
@@ -46,6 +47,26 @@ private:
     }
     
     auto storeGrad(T grad) noexcept -> void { grad_ += grad; }
+    
+    auto disptachOperation(MathOperation op, double v1, double v2) -> double {
+        switch (op) {
+            case MathOperation::ADD:
+                return v1 + v2;
+                break;
+            case MathOperation::SUB:
+                return v1 - v2;
+                break;
+            case MathOperation::MUL:
+                return v1 * v2;
+                break;
+            case MathOperation::DIV:
+                return v1 / v2;
+                break;
+            case MathOperation::NONE:
+                return v1;
+                break;
+        }
+    } 
 
 public:
     V(T data): data_(std::move(data)) {}
@@ -59,6 +80,39 @@ public:
     auto backward() -> void {
         grad_ = 1.0;
         unwrp_backward();
+    }
+
+    auto calcVal() -> double {
+        if (__children_.empty()) return data_;
+
+        auto data1 = __children_[0]->calcVal();
+        auto data2 = __children_[1]->calcVal();
+        data_ = disptachOperation(
+            __op_,
+            data1,
+            data2
+        );
+        return data_;
+    }
+
+    auto applyGrad(double step) -> void {
+        if (__children_.empty()) return;
+
+        for (auto& child : __children_) {
+            child->setData(
+                child->getData() - step * child->getGrad()
+            );
+            child->applyGrad(step);
+        }
+    }
+
+    auto zeroGrad() -> void {
+        if (__children_.empty()) return;
+
+        for (auto& child: __children_) {
+            child->setGrad(0.0);
+            child->zeroGrad();
+        }
     }
 
     [[nodiscard]] auto operator+(V<T>& other) -> V<T> {
@@ -109,3 +163,13 @@ public:
         return out;
     }
 };
+
+template <typename T>
+auto minimize(V<T> *root, double step, int runs) -> void {
+    int i = runs;
+    do {
+        root->backward();
+        root->applyGrad(step);
+        root->zeroGrad();
+    } while (runs-- > 0);
+} 
