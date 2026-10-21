@@ -1,7 +1,5 @@
 # graph-grad
 ---
-Calculating gradient of complex function using graphs
-
 A small autograd engine in C++. Every operation on a `V<T>` value remembers its
 inputs and how to pass the gradient back to them, so after building an expression
 you can call `backward()` and read the gradient of every input. The computation
@@ -75,16 +73,6 @@ Rendered with `python3 run.py graphs/graph.gr assets/graph png`:
 
 ![Computation graph](assets/graph.png)
 
-Gradients of `L` with respect to each input:
-
-| Input | Value | Gradient | Why |
-|---|---|---|---|
-| `a` | 2 | -48 | used three times: `b · ∂L/∂e` + `∂L/∂k` + `∂L/∂p` = -24 - 16 - 8 |
-| `b` | -3 | 16 | `a · ∂L/∂e` = 2 · 8 |
-| `c` | 10 | 8 | `∂L/∂h` |
-| `d` | 4 | 16 | `-∂L/∂k` = -(-16) |
-| `f` | -2 | -24 | `g · ∂L/∂n` = 3 · -8 |
-| `g` | 3 | 16 | `f · ∂L/∂n` = -2 · -8 |
 
 `a` appears three times in the picture because the exported graph is a tree:
 every use of a value gets its own copy. All copies show the same total gradient.
