@@ -144,7 +144,7 @@ public:
             {this, &other},
             MathOperation::SUB,
             [&](double g) {
-                this->storeGrad(-g);
+                this->storeGrad(g);
                 other.storeGrad(-g);
             }
         );

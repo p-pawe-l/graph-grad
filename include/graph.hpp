@@ -10,6 +10,7 @@ struct value_node;
 struct value_node {
     using Pvn = std::unique_ptr<value_node>;
     double data_;
+    double grad_;
     MathOperation op_;
     std::string label_;
 
