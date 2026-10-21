@@ -9,7 +9,7 @@ def _collectDotLines(node: Node, lines: list[str], visited: set[int]) -> None:
     visited.add(id(node))
 
     node_id = f"n{id(node)}"
-    lines.append(f'    {node_id} [shape=record, label="{{ {node.label} | data {node.data:.4f} }}"];')
+    lines.append(f'    {node_id} [shape=record, label="{{ {node.label} | data {node.data:.4f} | grad {node.grad:.4f} }}"];')
 
     if node.op == "none":
         # We are in the leaf

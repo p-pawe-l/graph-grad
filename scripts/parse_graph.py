@@ -1,6 +1,7 @@
 class Node:
-    def __init__(self, data, label, op) -> None:
+    def __init__(self, data, grad, label, op) -> None:
         self.data = data
+        self.grad = grad
         self.label = label
         self.op = op
         
@@ -27,15 +28,17 @@ def _formatNodeLines(node_lines: list[str]):
 def _createNodesFromFormattedNodeLines(lines: list[list[str]]) -> list[Node]:
     nodes: list[Node] = []
     for nline in lines:
+        # label | data | grad | op | left | right
         node: Node = Node(
             data=float(nline[1]),
+            grad=float(nline[2]),
             label=nline[0],
-            op=nline[2]
+            op=nline[3]
         )
         for iter_node in nodes:
-            if iter_node.label == nline[3]:
-                node.left = iter_node
             if iter_node.label == nline[4]:
+                node.left = iter_node
+            if iter_node.label == nline[5]:
                 node.right = iter_node
 
         nodes.append(node)
