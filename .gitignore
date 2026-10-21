@@ -1,0 +1,23 @@
+# CMake build output
+build/
+compile_commands.json
+
+# clangd index
+.cache/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Graphs generated in the project root by ./build/mygrad and run.py
+# (copies kept in graphs/ and assets/ are still tracked)
+/graph.gr
+/graph.png
+/graph.svg
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
