@@ -32,7 +32,7 @@ assets/                rendered images
 ```sh
 cmake -S . -B build
 cmake --build build
-./build/mygrad            # writes graph.gr in the current directory
+./build/mygrad            # writes graphs/graph.gr (run from the project root)
 ```
 
 ## Plotting the graph
@@ -45,9 +45,49 @@ python3 run.py                                    # defaults: graph.gr -> graph.
 
 Run it from the project root so the `scripts` package can be imported.
 
-Computation graph for `d = a * b` with `a = 10`, `b = 10`:
+## Example
+
+[main.cpp](main.cpp) builds
+
+```
+L = ((a * b + c) * (a - d)) * (f * g + a)
+```
+
+with `a = 2`, `b = -3`, `c = 10`, `d = 4`, `f = -2`, `g = 3`, calls
+`L.backward()` and exports the graph:
+
+```cpp
+V<double> e = a * b;  e.setLabel("e");   // -6
+V<double> h = e + c;  h.setLabel("h");   //  4
+V<double> k = a - d;  k.setLabel("k");   // -2
+V<double> m = h * k;  m.setLabel("m");   // -8
+V<double> n = f * g;  n.setLabel("n");   // -6
+V<double> p = n + a;  p.setLabel("p");   // -4
+V<double> L = m * p;  L.setLabel("L");   // 32
+
+L.backward();
+auto root = buildGraphFromV(L);
+std::string filename = "graphs/graph.gr";
+saveGraphToFile(std::move(root), filename);
+```
+
+Rendered with `python3 run.py graphs/graph.gr assets/graph png`:
 
 ![Computation graph](assets/graph.png)
+
+Gradients of `L` with respect to each input:
+
+| Input | Value | Gradient | Why |
+|---|---|---|---|
+| `a` | 2 | -48 | used three times: `b · ∂L/∂e` + `∂L/∂k` + `∂L/∂p` = -24 - 16 - 8 |
+| `b` | -3 | 16 | `a · ∂L/∂e` = 2 · 8 |
+| `c` | 10 | 8 | `∂L/∂h` |
+| `d` | 4 | 16 | `-∂L/∂k` = -(-16) |
+| `f` | -2 | -24 | `g · ∂L/∂n` = 3 · -8 |
+| `g` | 3 | 16 | `f · ∂L/∂n` = -2 · -8 |
+
+`a` appears three times in the picture because the exported graph is a tree:
+every use of a value gets its own copy. All copies show the same total gradient.
 
 ## How it works
 
@@ -59,12 +99,13 @@ Computation graph for `d = a * b` with `a = 10`, `b = 10`:
    root last:
 
    ```
-   b | 10.000000 | none | none | none
-   a | 10.000000 | none | none | none
-   d | 100.000000 | * | a | b
+   b | 10.000000 | 10.000000 | none | none | none
+   a | 10.000000 | 10.000000 | none | none | none
+   d | 100.000000 | 1.000000 | * | a | b
    ```
 
-   Columns are `label | data | operation | left child | right child`.
+   Columns are `label | data | grad | operation | left child | right child`.
+   Call `backward()` on the root before exporting, otherwise every grad is 0.
 4. **Parse** - `scripts/parse_graph.py` splits each line on `|` and creates a
    `Node`. Children are linked by label; because leaves come first, a node's
    children already exist when it is read. The last node is the root.
