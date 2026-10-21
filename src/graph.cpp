@@ -23,11 +23,17 @@ namespace {
     inline auto constructGrLine(
         const std::string& l, 
         const double d, 
+        const double grad,
         const MathOperation o, 
         const std::string& c1l, 
         const std::string& c2l
     ) -> std::string {
-        return l + " | " + std::to_string(d) + " | " + opNameDisptach(o) + " | " + c1l + " | " + c2l; 
+        return l + " | " + 
+        std::to_string(d) + " | " + 
+        std::to_string(grad) + " | " + 
+        opNameDisptach(o) + " | " + 
+        c1l + " | " + 
+        c2l; 
     }
 
     inline auto constructGrLineFromNode(const value_node& pvn) -> std::string {
@@ -35,6 +41,7 @@ namespace {
         return constructGrLine(
             pvn.label_,
             pvn.data_,
+            pvn.grad_,
             pvn.op_,
             pvn.left_ != nullptr ? pvn.left_->label_ : none,
             pvn.right_ != nullptr ? pvn.right_->label_ : none
@@ -58,6 +65,7 @@ std::unique_ptr<value_node> buildGraphFromV(V<double>& root) {
     if (root.getChildren().empty()) {
         out = {
             .data_ = root.getData(),
+            .grad_ = root.getGrad(),
             // No operation created this leaf
             .op_ = MathOperation::NONE,
             .label_ = root.getLabel(),
@@ -69,6 +77,7 @@ std::unique_ptr<value_node> buildGraphFromV(V<double>& root) {
         
     out = {
         .data_ = root.getData(),
+        .grad_ = root.getGrad(),
         .op_ = root.getOp(),
         .label_ = root.getLabel(),
         .left_ = buildGraphFromV(*root.getChildren().at(LEFT)),
